@@ -5,6 +5,7 @@ import { URL as NodeURL } from 'node:url';
 import test from 'node:test';
 import { handleRequest } from '../index.ts';
 import type { Env } from '../env.ts';
+import { createAuth } from './createAuth.ts';
 
 const origin = 'http://127.0.0.1:5173';
 
@@ -15,10 +16,12 @@ const origin = 'http://127.0.0.1:5173';
 function createFixture() {
   const db = new DatabaseSync(':memory:');
   db.exec(readFileSync(new NodeURL('../../migrations/0001_auth.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new NodeURL('../../migrations/0002_admin.sql', import.meta.url), 'utf8'));
   const env: Env = {
     DB: db as unknown as D1Database,
     BETTER_AUTH_SECRET: 'test-only-secret-with-at-least-32-characters',
     BETTER_AUTH_URL: origin,
+    ADMIN_EMAIL: 'alice@example.test',
   };
   return { db, env };
 }
@@ -40,6 +43,18 @@ function requestApi(env: Env, path: string, body?: Record<string, unknown>, cook
 }
 
 /**
+ * テスト専用に信頼されたサーバー内部からユーザーを準備してログインする。
+ * @param env 一時DBの設定。
+ * @param input テストユーザーの入力。
+ * @param role テストで確認する権限。
+ * @returns パスワードログインの応答。
+ */
+async function seedUser(env: Env, input: { name: string; email: string; password: string }, role: 'admin' | 'user' = 'user') {
+  await createAuth(env).api.createUser({ body: { ...input, role } });
+  return requestApi(env, '/api/auth/sign-in/email', { email: input.email, password: input.password });
+}
+
+/**
  * 応答からセッションCookieを取得する。
  * @param response 登録・ログインの応答。
  * @returns 後続リクエストに送るセッションCookie。
@@ -58,7 +73,7 @@ async function authenticatesAndRevokesSession() {
   const { db, env } = createFixture();
   try {
     const password = 'test-password-1234';
-    const registered = await requestApi(env, '/api/auth/sign-up/email', {
+    const registered = await seedUser(env, {
       name: '利用者A', email: 'alice@example.test', password,
     });
     assert.equal(registered.status, 200, await registered.clone().text());
@@ -87,10 +102,10 @@ async function authenticatesAndRevokesSession() {
 async function isolatesUserIdentity() {
   const { db, env } = createFixture();
   try {
-    const first = await requestApi(env, '/api/auth/sign-up/email', {
+    const first = await seedUser(env, {
       name: '利用者A', email: 'alice@example.test', password: 'test-password-1234',
     });
-    const second = await requestApi(env, '/api/auth/sign-up/email', {
+    const second = await seedUser(env, {
       name: '利用者B', email: 'bob@example.test', password: 'test-password-5678',
     });
     const firstBody = await (await requestApi(env, '/api/me', undefined, sessionCookie(first))).json() as { user: { id: string } };
@@ -125,3 +140,35 @@ async function rejectsCrossOriginAndInvalidCookies() {
 test('account registration, password login and session revocation', authenticatesAndRevokesSession);
 test('user identity is derived only from the authenticated session', isolatesUserIdentity);
 test('cross-origin requests and invalid cookies are rejected', rejectsCrossOriginAndInvalidCookies);
+
+/** 公開登録を拒否し、本人の管理者だけが一般ユーザーを作成できることを確認する。 */
+async function restrictsAccountCreationToOwner() {
+  const { db, env } = createFixture();
+  const input = { name: '作成テスト', email: 'new@example.test', password: 'test-password-9012', role: 'admin' };
+  try {
+    assert.equal((await requestApi(env, '/api/auth/sign-up/email', input)).status, 403);
+    assert.equal((await requestApi(env, '/api/auth/admin/create-user', input)).status, 403);
+    assert.equal((await requestApi(env, '/api/admin/users', input)).status, 401);
+    const normal = await seedUser(env, { name: '一般', email: 'bob@example.test', password: 'test-password-5678' });
+    const normalCookie = sessionCookie(normal);
+    assert.equal((await requestApi(env, '/api/admin/users', input, normalCookie)).status, 403);
+    const owner = await seedUser(env, { name: '所有者', email: 'alice@example.test', password: 'test-password-1234' }, 'admin');
+    const ownerCookie = sessionCookie(owner);
+    const created = await requestApi(env, '/api/admin/users', input, ownerCookie);
+    assert.equal(created.status, 201, await created.clone().text());
+    const user = (await created.json() as { user: { role: string } }).user;
+    assert.equal(user.role, 'user');
+    const wrongOwner = await seedUser(env, { name: '別の管理者', email: 'other@example.test', password: 'test-password-6789' }, 'admin');
+    assert.equal((await requestApi(env, '/api/admin/users', input, sessionCookie(wrongOwner))).status, 403);
+    const crossOrigin = await handleRequest(new Request(`${origin}/api/admin/users`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://untrusted.example', Cookie: ownerCookie },
+      body: JSON.stringify({ ...input, email: 'cross@example.test' }),
+    }), env);
+    assert.equal(crossOrigin.status, 403);
+    const listing = await requestApi(env, '/api/admin/users', undefined, ownerCookie);
+    assert.equal(listing.status, 200);
+    assert.doesNotMatch(await listing.text(), /password|session_token/);
+  } finally { db.close(); }
+}
+
+test('only the owner admin can create regular accounts', restrictsAccountCreationToOwner);

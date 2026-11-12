@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { admin } from 'better-auth/plugins';
 import type { Env } from '../env.ts';
 
 /**
@@ -24,7 +25,8 @@ export function createAuth(env: Env) {
     baseURL: origin,
     basePath: '/api/auth',
     trustedOrigins: [origin],
-    emailAndPassword: { enabled: true, minPasswordLength: 12, maxPasswordLength: 128 },
+    emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: 12, maxPasswordLength: 128 },
+    plugins: [admin({ defaultRole: 'user' })],
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
     rateLimit: { enabled: true, storage: 'database', window: 60, max: 30 },
     advanced: { ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] } },

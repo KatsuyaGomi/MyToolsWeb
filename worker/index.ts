@@ -1,5 +1,7 @@
 import { createAuth } from './auth/createAuth.ts';
 import type { Env } from './env.ts';
+import { handleAdminUsers, isOwnerAdmin } from './auth/adminApi.ts';
+import { handleSetup } from './auth/setupApi.ts';
 
 /**
  * 公開の疎通確認、認証エンドポイント、ログイン後のAPIを振り分ける。
@@ -9,6 +11,10 @@ import type { Env } from './env.ts';
  */
 export async function handleRequest(request: Request, env: Env = {}): Promise<Response> {
   const { pathname } = new URL(request.url);
+
+  if (pathname === '/api/auth/sign-up/email' || pathname.startsWith('/api/auth/admin/')) {
+    return Response.json({ error: '公開のアカウント作成は無効です。' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+  }
 
   if (pathname === '/api/health') {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -26,6 +32,7 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
 
   try {
     const auth = createAuth(env);
+    if (pathname === '/api/setup') return handleSetup(request, auth, env);
     if (pathname.startsWith('/api/auth/')) {
       const response = await auth.handler(request);
       response.headers.set('Cache-Control', 'no-store');
@@ -36,9 +43,10 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
     if (!session) {
       return Response.json({ error: 'ログインが必要です。' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
     }
+    if (pathname === '/api/admin/users') return handleAdminUsers(request, auth, session, env);
     if (pathname === '/api/me' && request.method === 'GET') {
       return Response.json(
-        { user: { id: session.user.id, name: session.user.name, email: session.user.email } },
+        { user: { id: session.user.id, name: session.user.name, email: session.user.email }, isAdmin: isOwnerAdmin(session, env) },
         { headers: { 'Cache-Control': 'no-store' } },
       );
     }

@@ -1,6 +1,7 @@
 import { Icon } from '../../shared/components/Icon';
 import { tools } from '../../tools/registry';
 import type { ToolDefinition } from '../../tools/registry';
+import { useAdminAccess } from '../auth/useAdminAccess';
 
 interface SidebarNavProps {
   onNavigate?: () => void;
@@ -13,6 +14,7 @@ interface SidebarNavProps {
  */
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const pathname = window.location.pathname;
+  const isAdmin = useAdminAccess();
   const categories = [...new Set(tools.map(getCategory))];
 
   /**
@@ -72,6 +74,12 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
         <Icon name="home" className="size-4" />
         ホーム
       </a>
+      {isAdmin && (
+        <a href="/admin/users" onClick={onNavigate} aria-current={pathname === '/admin/users' ? 'page' : undefined}
+          className={`mt-2 flex items-center gap-3 rounded border-l-2 px-3 py-2.5 text-sm ${pathname === '/admin/users' ? 'border-accent bg-selection text-ink' : 'border-transparent text-muted hover:bg-elevated'}`}>
+          <Icon name="grid" className="size-4" />アカウント管理
+        </a>
+      )}
       <div className="mt-8 flex items-center justify-between px-3 text-[10px] font-semibold tracking-[.18em] text-muted">
         <span>ツール</span>
         <span className="rounded bg-elevated px-1.5 py-0.5 text-xs tracking-normal">{tools.length}</span>

@@ -34,7 +34,7 @@ src/
     layouts/            ヘッダー・サイドメニュー・共通枠
     pages/              ホーム画面とツール一覧
     router/             URLとページの対応、未定義URLの案内
-    auth/               ログイン・登録・ログアウトとセッション確認
+    auth/               ログイン・管理者のユーザー作成・初期管理者設定
   shared/components/    共通アイコンなどのUI部品
   styles/theme.css      Tailwind読み込みとダークテーマの共通色
   tools/
@@ -65,6 +65,8 @@ wrangler.jsonc          Cloudflare Workersの設定
 データの保存・取得は `React → /api/* → Worker → D1` の経路で行います。Workerから `DB` バインディングでアクセスし、Cloudflareの認証情報をブラウザーへ渡しません。localStorage / IndexedDBは端末固有の表示設定や一時的な下書き等の補助用途に限定します。
 
 認証用D1の接続設定と `migrations/0001_auth.sql` を用意し、ローカル・本番へ適用済みです。ツールの保存機能を追加する際は、既存DBを使用して必要なスキーマ変更を追加します。以下は新しい環境を構築する場合の手順です。
+
+管理者用スキーマは `migrations/0002_admin.sql` で追加済みです。DBを直接確認する手順は [D1操作ガイド](./docs/d1.md) を参照してください。
 
 1. D1のDBを作成し、`wrangler.jsonc` に `d1_databases` と `DB` バインディングを設定する。
 2. Workerの環境型とツール単位のDBアクセス処理を実装する。
@@ -105,11 +107,11 @@ npm run deploy
 
 テンプレートから作成する操作では、元のリポジトリーを別リポジトリーへ複製する場合があります。Cloudflare側でビルド対象のリポジトリー・ブランチを確認し、修正がそのリポジトリーへ反映されてから再ビルドしてください。
 
-認証はWorkers内で動くBetter AuthとD1を使用します。FirebaseやCloudflare Accessは不要です。自己登録型で、メール確認・再設定メールは未対応です。各ツールの個人データは認証済みユーザーIDに基づいてWorker側で分離します。詳細は [認証ガイド](./docs/authentication.md) を参照してください。
+認証はWorkers内で動くBetter AuthとD1を使用します。FirebaseやCloudflare Accessは不要です。公開の新規登録は無効で、管理者本人だけが「アカウント管理」から一般ユーザーを作成します。初期管理者は一度限りのリンクでパスワードを設定します。メール確認・再設定メールは未対応です。詳細は [認証ガイド](./docs/authentication.md) を参照してください。
 
 ## 環境変数・シークレット
 
-認証には `BETTER_AUTH_SECRET` と `BETTER_AUTH_URL` が必要です。ローカルでは `.dev.vars`、本番の秘密鍵はCloudflareのSecretsで設定します。`.dev.vars*` と `.env*` はGitから除外しています。`VITE_*` の値はブラウザーへ公開されるため秘密情報を入れないでください。
+認証には `BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`、管理者メールの `ADMIN_EMAIL` が必要です。ローカルでは `.dev.vars`、本番の秘密鍵と管理者メールはCloudflareのSecretsで設定します。`.dev.vars*` と `.env*` はGitから除外しています。`VITE_*` の値はブラウザーへ公開されるため秘密情報を入れないでください。
 
 ## AIで開発する
 
