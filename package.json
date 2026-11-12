@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.node.json",
-    "test": "node --experimental-strip-types --test worker/index.test.ts worker/auth/auth.test.ts worker/tools/todo/api.test.ts src/tools/todo/lib/board.test.ts",
+    "test": "node --experimental-strip-types --test worker/index.test.ts worker/auth/auth.test.ts worker/tools/todo/api.test.ts src/tools/todo/lib/board.test.ts worker/tools/calendar/api.test.ts src/tools/calendar/lib/dates.test.ts",
     "check": "npm run typecheck && npm test",
     "build": "node scripts/cleanBuild.mjs && npm run typecheck && vite build",
     "preview": "vite preview",

@@ -21,6 +21,7 @@ My Tools は、自分用のWebツールを集める日本語のWebアプリ。Cl
 - ビルド連携: `@cloudflare/vite-plugin`。設定は `vite.config.ts` と `wrangler.jsonc`。
 - ツール一覧: `src/tools/registry.ts`。個別ツールは `src/tools/<tool-id>/` にまとめ、共通部品は実際に再利用される時点で切り出す。
 - Todoは `src/tools/todo/` と `worker/tools/todo/` に実装。画面・Worker双方のデータ契約だけをルートの `shared/todo.ts` に置く。ユーザー別D1保存、版番号による競合検出と上限は `docs/todo.md` を参照する。
+- カレンダーは `src/tools/calendar/` と `worker/tools/calendar/` に実装。`shared/calendar.ts` の5分刻み検証と日本時間の方針を維持する。Privateは本人のみ、Publicは全ログインユーザーが登録者名付きで閲覧可能。変更は公開範囲にかかわらず本人のみ。詳細は `docs/calendar.md` を参照する。
 - 永続保存するアプリデータのDBには **Cloudflare D1** を使用する。認証はWorkers内のBetter AuthとD1によるメール・パスワード方式。ローカル・本番の認証テーブル、Secrets、接続設定は導入済み。クライアントルーターのライブラリーは未導入。
 - `dist/`、`node_modules/`、`.wrangler/` は生成物。直接編集しない。
 

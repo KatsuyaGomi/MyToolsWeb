@@ -3,6 +3,7 @@ import type { Env } from './env.ts';
 import { handleAdminUsers, isOwnerAdmin } from './auth/adminApi.ts';
 import { handleSetup } from './auth/setupApi.ts';
 import { handleTodo } from './tools/todo/api.ts';
+import { handleCalendar } from './tools/calendar/api.ts';
 
 /**
  * 公開の疎通確認、認証エンドポイント、ログイン後のAPIを振り分ける。
@@ -46,6 +47,7 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
     }
     if (pathname === '/api/admin/users') return handleAdminUsers(request, auth, session, env);
     if (pathname === '/api/todo') return handleTodo(request, env.DB!, session.user.id);
+    if (pathname === '/api/calendar') return handleCalendar(request, env.DB!, session.user.id);
     if (pathname === '/api/me' && request.method === 'GET') {
       return Response.json(
         { user: { id: session.user.id, name: session.user.name, email: session.user.email }, isAdmin: isOwnerAdmin(session, env) },

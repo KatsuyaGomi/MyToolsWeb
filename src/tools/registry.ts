@@ -10,4 +10,7 @@ export interface ToolDefinition {
 export const tools: readonly ToolDefinition[] = [{
   id: 'todo', name: 'Todo タスク', description: 'カンバンでタスクの優先順・ステータスを整理します。',
   href: '/tools/todo', category: '作業管理',
+}, {
+  id: 'calendar', name: 'カレンダー', description: '自分の予定と、全員のPublic予定を確認します。',
+  href: '/tools/calendar', category: '作業管理',
 }];
