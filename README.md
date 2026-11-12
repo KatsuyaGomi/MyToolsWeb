@@ -3,7 +3,7 @@
 自分用のWebツールを少しずつ追加していくための、Cloudflare Workers向けアプリです。
 React + TypeScript + Viteで画面を作り、Cloudflare Vite pluginを通じてWorkersのAPIと静的アセットをまとめてビルドします。
 
-現在はTailwind CSSのダークテーマによるホーム画面、共通サイドメニュー、メールアドレス・パスワードによるアプリ内認証を用意しています。本番D1との接続と認証の公開は完了しています。個別ツールはまだ登録していません。
+Tailwind CSSのダークテーマによるホーム画面、共通サイドメニュー、メールアドレス・パスワードによるアプリ内認証を用意しています。本番D1との接続と認証の公開は完了しています。個人用の[Todoカンバンボード](./docs/todo.md)を追加しています。
 
 ## 開発を始める
 
@@ -39,10 +39,13 @@ src/
   styles/theme.css      Tailwind読み込みとダークテーマの共通色
   tools/
     registry.ts         実装済みツールの一覧
+    todo/               個人用カンバンボード
+shared/todo.ts          フロントエンド・Worker共通のTodoデータ型
 worker/
   index.ts              /api/* のリクエスト処理
   index.test.ts         APIの単体テスト
   auth/                 Better Authの設定と認証テスト
+  tools/todo/           Todo API・入力検証・D1保存
   env.ts                Workerの環境型
 migrations/             D1認証テーブルのマイグレーション
 AGENTS.md               AI開発の方針と作業手順

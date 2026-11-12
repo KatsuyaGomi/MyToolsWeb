@@ -1,11 +1,13 @@
 import { HomePage } from '../pages/HomePage';
 import { AdminUsersPage } from '../auth/AdminUsersPage';
+import { TodoPage } from '../../tools/todo';
 
 /**
  * 現在のパスに対応するページを選び、未定義のURLは案内画面にする。
  * @returns ホームまたは見つからないページの案内。
  */
 export function AppRoutes() {
+  if (window.location.pathname === '/tools/todo') return <TodoPage />;
   if (window.location.pathname === '/admin/users') return <AdminUsersPage />;
   if (window.location.pathname === '/') {
     return <HomePage />;
