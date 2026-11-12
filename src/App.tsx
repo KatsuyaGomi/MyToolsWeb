@@ -1,5 +1,6 @@
 import { AppLayout } from './app/layouts/AppLayout';
 import { AppRoutes } from './app/router/AppRoutes';
+import { AuthGate } from './app/auth/AuthGate';
 
 /**
  * アプリ共通のレイアウトと現在のURLに対応するページを描画する。
@@ -7,8 +8,10 @@ import { AppRoutes } from './app/router/AppRoutes';
  */
 export function App() {
   return (
-    <AppLayout>
-      <AppRoutes />
-    </AppLayout>
+    <AuthGate>
+      <AppLayout>
+        <AppRoutes />
+      </AppLayout>
+    </AuthGate>
   );
 }

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Icon } from '../../shared/components/Icon';
 import { SidebarNav } from './SidebarNav';
+import { AccountMenu } from '../auth/AccountMenu';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -55,8 +56,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <span className="mx-2 hidden h-5 border-l border-line sm:block" />
           <span className="hidden text-xs text-muted sm:block">パーソナル ワークスペース</span>
         </div>
-        <span className="grid size-7 place-items-center rounded-full border border-line bg-elevated text-[10px] font-semibold text-accent"
-          aria-label="My Tools ワークスペース">MT</span>
+        <AccountMenu />
       </header>
 
       <aside className="fixed bottom-0 left-0 top-14 hidden w-60 flex-col border-r border-line bg-panel md:flex">

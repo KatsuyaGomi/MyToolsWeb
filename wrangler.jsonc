@@ -1,8 +1,22 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "my-app-web",
+  "name": "my-tools-web",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "BETTER_AUTH_URL": "https://my-tools-web.katsu05131990.workers.dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-tools-web-db",
+      "database_id": "9adb786c-f23a-499a-bd59-7990531c6798",
+      "migrations_dir": "migrations"
+    }
+  ],
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api", "/api/*"]
