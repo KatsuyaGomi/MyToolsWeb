@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Segoe UI', 'Noto Sans JP', sans-serif;
+  --color-canvas: #17191f;
+  --color-panel: #20232b;
+  --color-elevated: #292d37;
+  --color-line: #343946;
+  --color-ink: #e8ebf2;
+  --color-muted: #a0a9ba;
+  --color-accent: #63aaff;
+  --color-selection: #203b5b;
+  --color-danger: #ff9494;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, a, input, select {
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 4px;
+    }
+  }
+
+  button, select {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-selection);
+    color: var(--color-ink);
+  }
+}

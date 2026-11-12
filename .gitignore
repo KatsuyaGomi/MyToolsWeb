@@ -1,0 +1,50 @@
+# 依存パッケージ・ビルド出力・テスト結果
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Cloudflareのローカル状態・環境変数・シークレット
+.wrangler/
+.dev.vars*
+.env*
+
+# アカウント情報・端末固有の設定・パッケージ認証
+.aws/
+.ssh/
+.config/
+.codex/
+.openai/
+.npmrc
+.yarnrc
+.yarnrc.yml
+.netrc
+_netrc
+.vscode/
+.idea/
+
+# 秘密鍵・証明書・認証情報のエクスポート
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+credentials*.json
+credentials*.csv
+service-account*.json
+service_account*.json
+secrets*.json
+secrets*.yaml
+secrets*.yml
+
+# ログ・通信記録・OSの一時ファイル
+*.log
+*.har
+*.dump
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
