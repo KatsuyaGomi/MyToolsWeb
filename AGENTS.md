@@ -20,7 +20,7 @@ My Tools は、自分用のWebツールを集める日本語のWebアプリ。Cl
 - API: Cloudflare Workers。エントリーポイントは `worker/index.ts`。APIのパスは `/api/*`。
 - ビルド連携: `@cloudflare/vite-plugin`。設定は `vite.config.ts` と `wrangler.jsonc`。
 - ツール一覧: `src/tools/registry.ts`。個別ツールは `src/tools/<tool-id>/` にまとめ、共通部品は実際に再利用される時点で切り出す。
-- 現時点で認証、データベース、永続化、クライアントルーターは未導入。必要なときに設計を選ぶ。
+- 永続保存するアプリデータのDBには **Cloudflare D1** を使用する。現時点ではDB実体・バインディング・テーブルは未作成。認証とクライアントルーターのライブラリーも未導入。
 - `dist/`、`node_modules/`、`.wrangler/` は生成物。直接編集しない。
 
 ## フォルダー構成
@@ -54,6 +54,7 @@ worker/
   index.ts                     APIの入口とルーティング
   tools/<tool-id>/             ツール単位のサーバー処理
   shared/                      サーバー専用の共通処理
+migrations/                    D1のスキーマ変更SQL（DB導入時に作成）
 ```
 
 - 上記は拡張時の配置基準。必要になったフォルダーだけ作成し、空の階層を先回りして増やさない。
@@ -131,6 +132,24 @@ export function formatJson(input: string, indentSize: number): string {
 - 画面はスマートフォンとキーボード操作に対応する。入力にはラベルを付け、処理に応じた読み込み中・空状態・失敗状態を用意する。
 - ユーザー入力をHTMLとして挿入しない。ログへ入力本文や個人情報を無条件に出力しない。
 
+## データの永続保存（Cloudflare D1）
+
+- ツールの保存データや端末間で共有する設定など、永続保存するアプリデータはD1へ保存する。他のDBは個別の要件とユーザーの方針変更がある場合に検討する。
+- localStorage / IndexedDBは、一時的な下書きや表示設定等の端末固有の補助用途に限定する。保存済みデータの正本をブラウザー内だけに置かない。
+- 構成は **React → `/api/*` → Worker → D1** とする。ブラウザーからD1を直接操作せず、Workerのバインディング `env.DB` を使う。CloudflareのAPIトークンをフロントエンドへ渡さない。
+- 初回導入時に `wrangler.jsonc` へ `d1_databases` と `DB` バインディングを設定し、Workerの環境型も更新する。架空のdatabase_idを実運用の設定へ追加しない。
+- DBアクセスは `worker/tools/<tool-id>/` に配置し、複数ツールで使う接続・処理だけ `worker/shared/` へ置く。画面やAPIハンドラーにSQLを散在させない。
+- まずD1標準APIの `prepare()` と `bind()` を使う。入力値をSQL文字列へ連結しない。動的なテーブル名・列名が必要な場合は許可リストで制限する。ORMは具体的な必要性がある場合に導入する。
+- 入力の型・長さ・必須条件をWorkerで検証し、DBにも必要な主キー・一意制約・外部キーを定義する。一覧取得は件数の上限と並び順を定める。
+- 複数テーブルでひとつの操作を構成する場合は、D1で対応する `batch()` 等を使って整合性を保つ。一般的なSQLのトランザクション構文をそのまま使えると仮定しない。
+- スキーマ変更はルートの `migrations/` に連番のSQLで管理し、Wranglerのマイグレーションで適用する。適用済みファイルは書き換えず、追加のマイグレーションで変更する。
+- 開発・テストはローカルD1を基本とし、マイグレーション実行時は `--local` / `--remote` を必ず明示する。本番DBを開発やプレビューの書き込み先にしない。リモート検証には本番と別のDBを使う。
+- ローカルでの変更やマイグレーションは本番へ自動反映されない。WorkerのデプロイだけでD1のマイグレーションが適用されると仮定しない。
+- 本番へのマイグレーション時は対象DBと既存データへの影響を確認する。削除や型変更では復旧手段も確認し、承認された作業範囲で実行する。
+- DBの実データ、エクスポート、SQLiteファイルはGitへ追加しない。マイグレーションと個人情報を含まないテストデータだけを管理する。
+- 保存・更新・削除APIを公開する際は認証・認可を確認する。D1バインディングがサーバー内部にあるだけでは、公開APIへのアクセスは制限されない。
+- DB機能の検証では、ローカルD1へのマイグレーション適用と読み書き、入力エラー、制約違反を確認する。Node単体テストだけでD1連携の検証完了としない。
+
 ## 秘密情報と公開
 
 - トークン、パスワード、個人データはコミットしない。ローカルのWorker用シークレットは `.dev.vars`、本番はWranglerのsecretsを使う。
@@ -142,7 +161,7 @@ export function formatJson(input: string, indentSize: number): string {
 
 ## コマンドと検証
 
-Node.js 22.12以降（推奨24 LTS）、npm、package-lock.jsonを使う。
+Node.js 22.12以降（推奨24 LTS）、npm 11.6.1、package-lock.jsonを使う。Cloudflareとローカルのnpmバージョンは `package.json` の `packageManager` で揃える。
 
 ```sh
 npm ci                # ロックファイルに従って依存を導入
@@ -154,6 +173,7 @@ npm run deploy        # 検証・ビルド後、Cloudflareへ公開
 ```
 
 - コード変更後は `npm run check` と `npm run build`。ドキュメントのみの場合は記載内容を確認する。
+- 依存追加・変更時はpackage.jsonとpackage-lock.jsonをセットで更新し、既存node_modulesのない隔離ディレクトリーで `npm ci` から検証する。OS別のoptional依存も含めたロックの不足と、npmのバージョン差に注意する。
 - テストは重要な処理、境界条件、修正した不具合を対象にする。外観だけの変更に形式的なテストを追加しない。
 - API変更時はステータス、メソッド、エラー入力を確認する。必要に応じてWorkersローカルランタイムでも確認する。現在のNodeテストだけではWorkers固有の動作を保証しない。
 - UI変更時は可能ならブラウザーで通常幅・モバイル幅・キーボード操作を確認する。できなかった確認を成功扱いにしない。
@@ -165,3 +185,6 @@ npm run deploy        # 検証・ビルド後、Cloudflareへ公開
 - [React: コンポーネント階層と責務の整理](https://react.dev/learn/thinking-in-react)
 - [Tailwind CSS: Viteとの連携](https://tailwindcss.com/docs/installation/using-vite)
 - [Azure DevOps: ポータルのナビゲーション](https://learn.microsoft.com/en-us/azure/devops/project/navigation/?view=azure-devops)
+- [Cloudflare D1: ローカル開発](https://developers.cloudflare.com/d1/best-practices/local-development/)
+- [Cloudflare D1: マイグレーション](https://developers.cloudflare.com/d1/reference/migrations/)
+- [Cloudflare D1: バインディングAPI](https://developers.cloudflare.com/d1/worker-api/d1-database/)

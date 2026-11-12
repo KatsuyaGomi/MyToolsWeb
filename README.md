@@ -7,7 +7,7 @@ React + TypeScript + Viteで画面を作り、Cloudflare Vite pluginを通じて
 
 ## 開発を始める
 
-Node.js 22.12以降（推奨24 LTS）とnpmを使用します。
+Node.js 22.12以降（推奨24 LTS）とnpm 11.6.1を使用します。`package.json` の `packageManager` でnpmのバージョンを固定しています。ローカルも `npm --version` でバージョンを確認してください。
 
 ```sh
 npm ci
@@ -54,7 +54,28 @@ wrangler.jsonc          Cloudflare Workersの設定
 4. サーバーが必要な場合は `worker/` に処理を追加し、`/api/*` で提供する。
 5. `npm run check` と `npm run build` を実行する。
 
-データの保存先は未導入です。ブラウザーだけで完結する処理を優先し、端末内保存ならlocalStorage/IndexedDB、端末間共有が必要ならD1などを要件に合わせて検討します。
+永続保存するアプリデータのDBには **Cloudflare D1** を使用します。ブラウザー内で完結する変換処理などは、そのままブラウザーで実行します。
+
+## データベースの方針
+
+データの保存・取得は `React → /api/* → Worker → D1` の経路で行います。Workerから `DB` バインディングでアクセスし、Cloudflareの認証情報をブラウザーへ渡しません。localStorage / IndexedDBは端末固有の表示設定や一時的な下書き等の補助用途に限定します。
+
+現時点では採用方針の定義までで、D1データベース・バインディング・テーブルは未作成です。最初の保存機能を実装する際に、保存項目を設計して以下を設定します。
+
+1. D1のDBを作成し、`wrangler.jsonc` に `d1_databases` と `DB` バインディングを設定する。
+2. Workerの環境型とツール単位のDBアクセス処理を実装する。
+3. ルートの `migrations/` にスキーマ変更SQLを作成する。
+4. ローカルD1へマイグレーションを適用し、保存・取得とエラー処理を確認する。
+5. 公開時に認証・認可を整え、本番DBへのマイグレーションとWorkerのデプロイをそれぞれ実施する。
+
+DB設定後のマイグレーション例です。`<database-name>` は設定したDB名へ置き換えます。
+
+```sh
+npx wrangler d1 migrations create <database-name> <migration-name>
+npx wrangler d1 migrations apply <database-name> --local
+```
+
+本番へ適用する場合は、対象DBと影響を確認したうえで `--remote` を明示します。ローカルDBは本番DBとは別で、開発中の変更が自動で本番へ反映されることはありません。実データやDBエクスポートはGitへ追加しません。
 
 ## Cloudflareへデプロイする
 
@@ -67,6 +88,19 @@ npm run deploy
 ```
 
 デプロイ先URLはWranglerが表示します。独自ドメイン、Cloudflare Access、D1等のバインディングは未設定です。
+
+### GitHub連携のWorkers Builds
+
+- ビルドコマンド: `npm run build`
+- デプロイコマンド: `npx wrangler deploy`
+- ルートディレクトリー: リポジトリーのルート
+- Worker名: `wrangler.jsonc` の `name`（現在は `my-app-web`）と一致させる
+
+依存インストールはCloudflareが自動で実行します。Workers Buildsは `packageManager` の指定からnpm 11.6.1を選択します。`engines.npm` だけではCloudflareのnpmバージョンは切り替わりません。
+
+`npm ci` が `Missing: ... from lock file` で停止する場合は、アプリのビルド前に依存関係の整合性チェックで失敗しています。`package.json` と `package-lock.json` をセットで更新し、既存の `node_modules` がない環境から `npm ci` と `npm run build` が通ることを確認します。ローカルで `npm install` が成功するだけでは検証完了にしません。
+
+テンプレートから作成する操作では、元のリポジトリーを別リポジトリーへ複製する場合があります。Cloudflare側でビルド対象のリポジトリー・ブランチを確認し、修正がそのリポジトリーへ反映されてから再ビルドしてください。
 
 **現状は認証がありません。** 自分だけが利用する場合は、機密データを扱う前にCloudflare Access等で画面とAPIの両方を保護してください。Cloudflare Accessを利用する場合は、設定したドメインに加えてworkers.devやプレビューURLから迂回できないことも確認します。
 
@@ -85,3 +119,6 @@ npm run deploy
 - [Cloudflare: React SPAとAPIの構築](https://developers.cloudflare.com/workers/vite-plugin/tutorial/)
 - [Cloudflare: 静的アセット](https://developers.cloudflare.com/workers/static-assets/)
 - [Cloudflare: AccessとWorkers](https://developers.cloudflare.com/workers/configuration/access/)
+- [Cloudflare: Workers Buildsのnpmバージョン指定](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)
+- [Cloudflare D1: はじめに](https://developers.cloudflare.com/d1/get-started/)
+- [Cloudflare D1: マイグレーション](https://developers.cloudflare.com/d1/reference/migrations/)

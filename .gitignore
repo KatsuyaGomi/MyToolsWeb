@@ -6,6 +6,22 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 
+# ローカルDB・実データのエクスポート（migrationsのSQLは管理する）
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+backups/
+db-exports/
+
 # Cloudflareのローカル状態・環境変数・シークレット
 .wrangler/
 .dev.vars*
