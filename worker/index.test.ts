@@ -43,7 +43,7 @@ async function preservesPublicRouteGuards() {
     assert.equal(response.status, 403);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
   }
-  for (const path of ['/api/todo', '/api/calendar', '/api/missing']) {
+  for (const path of ['/api/todo', '/api/calendar', '/api/chat/rooms', '/api/chat/device', '/api/missing']) {
     const response = await handleRequest(new Request(`https://example.com${path}`));
     assert.equal(response.status, 503);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');

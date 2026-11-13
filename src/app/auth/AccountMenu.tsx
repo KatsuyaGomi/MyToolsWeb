@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { authClient } from './client';
+import { disableNotifications } from '../../tools/chat';
 
 /**
  * ログイン中の表示名とログアウト操作を表示する。
@@ -15,6 +16,8 @@ export function AccountMenu() {
     setIsBusy(true);
     setError('');
     try {
+      try { await disableNotifications(); }
+      catch { /* 通知解除の通信に失敗しても、セッションの失効を優先する。 */ }
       const result = await authClient.signOut();
       if (result.error) setError('ログアウトできませんでした。');
     } catch {

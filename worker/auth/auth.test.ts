@@ -149,7 +149,7 @@ async function restrictsAccountCreationToOwner() {
     assert.equal((await requestApi(env, '/api/auth/sign-up/email', input)).status, 403);
     assert.equal((await requestApi(env, '/api/auth/admin/create-user', input)).status, 403);
     assert.equal((await requestApi(env, '/api/admin/users', input)).status, 401);
-    for (const path of ['/api/me', '/api/todo', '/api/calendar', '/api/groups', '/api/admin/groups', '/api/missing']) {
+    for (const path of ['/api/me', '/api/todo', '/api/calendar', '/api/chat/rooms', '/api/chat/device', '/api/groups', '/api/admin/groups', '/api/missing']) {
       assert.equal((await requestApi(env, path)).status, 401, `${path}も共通のセッション確認を通る`);
     }
     const normal = await seedUser(env, { name: '一般', email: 'bob@example.test', password: 'test-password-5678' });

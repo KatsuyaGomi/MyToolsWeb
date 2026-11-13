@@ -6,6 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
+  "triggers": { "crons": ["* * * * *"] },
   "vars": {
     "BETTER_AUTH_URL": "https://my-tools-web.katsu05131990.workers.dev"
   },
