@@ -13,4 +13,7 @@ export const tools: readonly ToolDefinition[] = [{
 }, {
   id: 'calendar', name: 'カレンダー', description: '自分の予定と、共通グループのPublic予定を確認します。',
   href: '/tools/calendar', category: '作業管理',
+}, {
+  id: 'chat', name: 'グループチャット', description: '所属グループのメンバーとメッセージを共有します。',
+  href: '/tools/chat', category: 'コミュニケーション',
 }];

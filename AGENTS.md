@@ -25,6 +25,7 @@ My Tools は、自分用のWebツールを集める日本語のWebアプリ。Cl
 - Todoは `src/tools/todo/` と `worker/tools/todo/` に実装。画面・Worker双方のデータ契約だけをルートの `shared/todo.ts` に置く。ユーザー別D1保存、版番号による競合検出と上限は `docs/todo.md` を参照する。
 - カレンダーは `src/tools/calendar/` と `worker/tools/calendar/` に実装。`shared/calendar.ts` の5分刻み検証と日本時間の方針を維持する。Privateは本人のみ、Publicは登録者と共通グループのあるログインユーザーだけが閲覧可能。変更は公開範囲にかかわらず本人のみ。詳細は `docs/calendar.md` を参照する。
 - グループは複数所属に対応し、管理者本人だけが作成・編集・削除と所属設定を行う。`worker/groups/` と `src/app/groups/` に実装する。共有は登録者の所属先すべてに適用し、未所属なら本人のみ。所属はセッションへ固定せず、閲覧時のSQLで確認する。詳細は `docs/groups.md` を参照する。
+- チャットは `src/tools/chat/`、`worker/tools/chat/`、`shared/chat.ts` に実装。グループごとに1部屋、現所属で認可し、表示中の5秒ポーリング、版付き差分、末尾表示による既読を維持する。Web PushはVAPID・D1ジョブ・Cronを使用し、セッション・所属・ミュートを確認する。Durable Objectsや有料サービスは追加しない。`docs/chat.md` を参照し、共同ローカル確認が終わるまでmainへ統合しない。
 - 永続保存するアプリデータのDBには **Cloudflare D1** を使用する。認証はWorkers内のBetter AuthとD1によるメール・パスワード方式。ローカル・本番の認証テーブル、Secrets、接続設定は導入済み。クライアントルーターのライブラリーは未導入。
 - `dist/`、`node_modules/`、`.wrangler/` は生成物。直接編集しない。
 

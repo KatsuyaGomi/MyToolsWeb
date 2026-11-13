@@ -6,10 +6,12 @@ import { requireSession } from './middleware.ts';
 import type { AppEnv } from './types.ts';
 import { handleGroups } from '../groups/api.ts';
 import { listMyGroups } from '../groups/repository.ts';
+import { chatRoutes } from '../tools/chat/api.ts';
 
 // このサブルーターに追加したAPIは、必ずセッション確認を通る。
 export const privateRoutes = new Hono<AppEnv>();
 privateRoutes.use('*', requireSession);
+privateRoutes.route('/chat', chatRoutes);
 
 privateRoutes.get('/groups', /** @param context 検証済みContext。 @returns 本人の所属先。 */ async (context) => {
   return context.json({ groups: await listMyGroups(context.env.DB!, context.get('session').user.id) });
