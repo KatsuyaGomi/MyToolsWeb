@@ -3,12 +3,14 @@ import type { FormEvent } from 'react';
 import { Modal, fieldStyle, primaryStyle, secondaryStyle } from '../../../shared/components/Modal';
 import { isCalendarTime } from '../types';
 import type { CalendarEvent, CalendarInput, CalendarVisibility } from '../types';
+import type { UserGroup } from '../../../../shared/groups';
 
 interface Props {
   day: string;
   event?: CalendarEvent;
   busy: boolean;
   error: string;
+  groups: UserGroup[];
   save: (input: CalendarInput | null, event?: CalendarEvent) => Promise<boolean>;
   onClose: () => void;
 }
@@ -18,7 +20,7 @@ interface Props {
  * @param props 対象予定と保存操作。
  * @returns 予定の詳細ダイアログ。
  */
-export function EventDialog({ day, event, busy, error, save, onClose }: Props) {
+export function EventDialog({ day, event, busy, error, groups, save, onClose }: Props) {
   const [validationError, setValidationError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const readonly = event !== undefined && !event.isOwner;
@@ -52,7 +54,7 @@ export function EventDialog({ day, event, busy, error, save, onClose }: Props) {
   return (
     <Modal title={event ? '予定の詳細' : '予定を追加'} busy={busy} onClose={onClose}>
       {event && <p className="mb-4 text-sm text-muted">登録者: <span className="font-semibold text-ink">{event.ownerName}</span>{event.isOwner ? '（自分）' : ''}</p>}
-      {readonly && <p className="mb-4 rounded bg-accent/10 p-3 text-sm text-accent">Publicの予定です。編集・削除は登録者本人のみ行えます。</p>}
+      {readonly && <p className="mb-4 rounded bg-accent/10 p-3 text-sm text-accent">共通グループに公開された予定です。編集・削除は登録者本人のみ行えます。</p>}
       <form onSubmit={submit} className="space-y-4">
         <fieldset disabled={busy || readonly} className="space-y-4 disabled:opacity-85">
           <label className="block text-sm">タイトル（必須）
@@ -71,10 +73,13 @@ export function EventDialog({ day, event, busy, error, save, onClose }: Props) {
             <select name="visibility" value={visibility} className={fieldStyle}
               onChange={/** 公開範囲と案内を更新する。 @param action 選択変更。 */ (action) => setVisibility(action.target.value as CalendarVisibility)}>
               <option value="private">Private — 自分のみ</option>
-              <option value="public">Public — アプリ使用者全員</option>
+              <option value="public">Public — 所属グループすべて</option>
             </select>
           </label>
-          <p className="text-sm leading-6 text-muted">{visibility === 'public' ? 'タイトル・説明・日時・登録者名が、ログインした全ユーザーに表示されます。' : '登録した本人だけが閲覧できます。'}</p>
+          <p className="text-sm leading-6 text-muted">{visibility === 'public' ? 'タイトル・説明・日時・登録者名が、登録者と共通グループに所属するユーザーへ表示されます。所属変更は既存のPublic予定にも反映されます。' : '登録した本人だけが閲覧できます。'}</p>
+          {!readonly && visibility === 'public' && <p className="text-sm leading-6 text-accent">
+            {groups.length > 0 ? `共有先: ${groups.map(/** @param group 所属先。 @returns 表示名。 */ (group) => group.name).join('、')}` : '現在は未所属のため本人だけに表示されます。管理者が所属先を設定すると、そのグループへ共有されます。'}
+          </p>}
         </fieldset>
         {(validationError || error) && <p role="alert" className="text-sm text-danger">{validationError || error}</p>}
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">

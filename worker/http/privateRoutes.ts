@@ -4,10 +4,29 @@ import { handleTodo } from '../tools/todo/api.ts';
 import { handleCalendar } from '../tools/calendar/api.ts';
 import { requireSession } from './middleware.ts';
 import type { AppEnv } from './types.ts';
+import { handleGroups } from '../groups/api.ts';
+import { listMyGroups } from '../groups/repository.ts';
 
 // このサブルーターに追加したAPIは、必ずセッション確認を通る。
 export const privateRoutes = new Hono<AppEnv>();
 privateRoutes.use('*', requireSession);
+
+privateRoutes.get('/groups', /** @param context 検証済みContext。 @returns 本人の所属先。 */ async (context) => {
+  return context.json({ groups: await listMyGroups(context.env.DB!, context.get('session').user.id) });
+});
+privateRoutes.all('/groups', /** @param context 検証済みContext。 @returns 未対応メソッドの案内。 */ (context) => {
+  context.header('Allow', 'GET');
+  return context.json({ error: '対応していない操作です。' }, 405);
+});
+
+privateRoutes.all('/admin/groups', /** @param context 管理者候補。 @returns 一覧・作成結果。 */ (context) =>
+  handleGroups(context.req.raw, context.env, context.get('session')));
+
+privateRoutes.all('/admin/groups/:id', /** @param context 管理者候補。 @returns グループの編集・削除結果。 */ (context) =>
+  handleGroups(context.req.raw, context.env, context.get('session'), { groupId: context.req.param('id') }));
+
+privateRoutes.all('/admin/users/:id/groups', /** @param context 管理者候補。 @returns 所属設定の保存結果。 */ (context) =>
+  handleGroups(context.req.raw, context.env, context.get('session'), { userId: context.req.param('id') }));
 
 privateRoutes.all('/admin/users', /**
  * 管理者本人だけにアカウント管理を委譲する。

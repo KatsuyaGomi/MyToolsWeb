@@ -5,6 +5,8 @@ React + TypeScript + Viteで画面を作り、APIはHono + Better Auth + D1で�
 
 Tailwind CSSのダークテーマによるホーム画面、共通サイドメニュー、メールアドレス・パスワードによるアプリ内認証を用意しています。本番D1との接続と認証の公開は完了しています。[Todoカンバンボード](./docs/todo.md)と、Private/Publicの予定を管理する[カレンダー](./docs/calendar.md)を利用できます。
 
+`codex/user-groups` ブランチでは、[グループ管理](./docs/groups.md)とPublic予定のグループ内共有を追加しています。この機能は本番未反映です。本番適用時はグループ用マイグレーションを先に適用してください。
+
 ## 開発を始める
 
 Bun 1.4.4を使用します。`package.json` の `packageManager` でバージョンを固定しています。`bun --version` で確認してください。[公式のインストール手順](https://bun.sh/docs/installation)で導入できます。新しく導入した場合はターミナルを開き直してください。

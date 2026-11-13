@@ -1,5 +1,6 @@
 import { changeEvent, createEvent, listEvents } from './repository.ts';
 import { parseEvent, parseRange } from './validation.ts';
+import { listMyGroups } from '../../groups/repository.ts';
 
 /**
  * 認証後のカレンダー操作を振り分ける。Publicもログイン済み利用者だけが閲覧できる。
@@ -24,7 +25,7 @@ export async function handleCalendar(request: Request, db: D1Database, userId: s
       if (!range) return json({ error: '期間または表示範囲が不正です（最大62日）。' }, 400);
       const events = await listEvents(db, userId, range);
       if (events.length > 500) return json({ error: '表示対象が500件を超えています。「自分の予定のみ」に切り替えてください。' }, 422);
-      return json({ events });
+      return json({ events, groups: await listMyGroups(db, userId) });
     }
     const reader = request.body?.getReader();
     if (!reader) return json({ error: '入力がありません。' }, 400);

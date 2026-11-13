@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "bun --preload ./scripts/bunHttpCompat.mjs ./node_modules/vite/bin/vite.js",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.tools.json",
-    "test": "bun test worker/index.test.ts worker/auth/auth.test.ts worker/tools/todo/api.test.ts src/tools/todo/lib/board.test.ts worker/tools/calendar/api.test.ts src/tools/calendar/lib/dates.test.ts",
+    "test": "bun test worker/index.test.ts worker/auth/auth.test.ts worker/groups/api.test.ts worker/tools/todo/api.test.ts src/tools/todo/lib/board.test.ts worker/tools/calendar/api.test.ts src/tools/calendar/lib/dates.test.ts",
     "check": "bun run typecheck && bun run test",
     "build": "bun scripts/cleanBuild.mjs && bun run typecheck && bun --preload ./scripts/bunHttpCompat.mjs ./node_modules/vite/bin/vite.js build",
     "preview": "bun --preload ./scripts/bunHttpCompat.mjs ./node_modules/vite/bin/vite.js preview",
