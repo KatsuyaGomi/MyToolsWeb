@@ -149,11 +149,17 @@ async function restrictsAccountCreationToOwner() {
     assert.equal((await requestApi(env, '/api/auth/sign-up/email', input)).status, 403);
     assert.equal((await requestApi(env, '/api/auth/admin/create-user', input)).status, 403);
     assert.equal((await requestApi(env, '/api/admin/users', input)).status, 401);
-    for (const path of ['/api/me', '/api/todo', '/api/calendar', '/api/missing']) {
+    for (const path of ['/api/me', '/api/todo', '/api/calendar', '/api/groups', '/api/admin/groups', '/api/missing']) {
       assert.equal((await requestApi(env, path)).status, 401, `${path}も共通のセッション確認を通る`);
     }
     const normal = await seedUser(env, { name: '一般', email: 'bob@example.test', password: 'test-password-5678' });
     const normalCookie = sessionCookie(normal);
+    assert.equal((await requestApi(env, '/api/admin/groups', undefined, normalCookie)).status, 403);
+    const selfGroupChange = await handleRequest(new Request(`${origin}/api/admin/users/anything/groups`, {
+      method: 'PUT', headers: { Origin: origin, Cookie: normalCookie, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupIds: [], revision: 0 }),
+    }), env);
+    assert.equal(selfGroupChange.status, 403);
     assert.equal((await requestApi(env, '/api/admin/users', input, normalCookie)).status, 403);
     const owner = await seedUser(env, { name: '所有者', email: 'alice@example.test', password: 'test-password-1234' }, 'admin');
     const ownerCookie = sessionCookie(owner);

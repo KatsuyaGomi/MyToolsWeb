@@ -52,6 +52,11 @@ async function enforcesVisibilityAndOwnership() {
     assert.equal(visible.isOwner, false);
     assert.equal(Object.hasOwn(visible, 'userId'), false);
     assert.equal((await list(db, 'bob', 'mine')).length, 1);
+    assert.equal((await list(db, 'carol')).length, 1, '登録者の別の所属先からも閲覧できる');
+    assert.equal((await list(db, 'dave')).length, 0, '別グループのPublicは応答に含まれない');
+    sqlite.exec("DELETE FROM groupMembership WHERE userId = 'bob'");
+    assert.equal((await list(db, 'bob')).length, 1, '所属解除後も本人のPrivateは残り、他人のPublicは消える');
+    sqlite.exec("INSERT INTO groupMembership VALUES ('bob', 'team-a')");
     assert.ok((await list(db, 'bob', 'mine')).every(/** @param event 候補。 @returns 本人の予定か。 */ (event) => event.isOwner));
     assert.equal((await request(db, 'bob', 'PUT', { ...input, id, revision: 0 })).status, 404);
     assert.equal((await request(db, 'bob', 'DELETE', { id, revision: 0 })).status, 404);
@@ -89,3 +94,21 @@ async function rejectsInvalidRequests() {
 
 test('予定のPrivate/Public・本人のみの変更・登録者名を保証する', enforcesVisibilityAndOwnership);
 test('5分単位・前後関係・範囲・不正な操作を検証する', rejectsInvalidRequests);
+
+/** 登録者の所属解除・グループ削除・未所属では共有せず、本人の予定は維持する。 */
+async function revokesSharingWhenMembershipChanges() {
+  const { db, sqlite } = createCalendarFixture();
+  try {
+    await request(db, 'alice', 'POST', input);
+    assert.equal((await list(db, 'bob')).length, 1, '複数の共通所属があっても1件だけ');
+    sqlite.exec("DELETE FROM groupMembership WHERE userId = 'alice' AND groupId = 'team-a'");
+    assert.equal((await list(db, 'bob')).length, 1, '共通グループが1つ残れば閲覧できる');
+    sqlite.exec("DELETE FROM userGroup WHERE id = 'team-b'");
+    assert.equal((await list(db, 'bob')).length, 0, '最後の共通グループがなくなると閲覧不可');
+    assert.equal((await list(db, 'alice')).length, 1, '未所属になっても本人のPublicは残る');
+  } finally {
+    sqlite.close();
+  }
+}
+
+test('複数所属・未所属と所属解除をカレンダー閲覧へ即時反映する', revokesSharingWhenMembershipChanges);

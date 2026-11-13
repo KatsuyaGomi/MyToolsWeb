@@ -8,7 +8,7 @@ interface EventRow extends CalendarInput {
 }
 
 /**
- * 本人の予定と、指定時だけ他ユーザーのPublic予定をDB側で絞り込む。
+ * 本人の予定と、共通グループに所属する登録者のPublic予定をDB側で絞り込む。
  * @param db D1接続。
  * @param userId セッションのユーザーID。
  * @param range 半開区間の期間と表示範囲。
@@ -18,9 +18,12 @@ export async function listEvents(db: D1Database, userId: string, range: { from: 
   const result = await db.prepare(`SELECT e.*, u.name AS ownerName FROM calendarEvent e
     JOIN "user" u ON u.id = e.userId
     WHERE e.startAt < ? AND e.endAt > ? AND
-      (e.userId = ? OR (? = 'public' AND e.visibility = 'public'))
+      (e.userId = ? OR (? = 'public' AND e.visibility = 'public' AND EXISTS (
+        SELECT 1 FROM groupMembership author
+        JOIN groupMembership viewer ON viewer.groupId = author.groupId
+        WHERE author.userId = e.userId AND viewer.userId = ?)))
     ORDER BY e.startAt, e.endAt, e.id LIMIT 501`)
-    .bind(range.to, range.from, userId, range.scope).all<EventRow>();
+    .bind(range.to, range.from, userId, range.scope, userId).all<EventRow>();
   return result.results.map(/** @param row 保存行。 @returns 閲覧用データ。 */ (row) => ({
     id: row.id, title: row.title, description: row.description, startAt: row.startAt,
     endAt: row.endAt, visibility: row.visibility, revision: row.revision,

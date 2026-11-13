@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CalendarEvent, CalendarInput, CalendarScope } from '../types';
+import type { UserGroup } from '../../../../shared/groups';
 
 /**
  * 表示範囲ごとの予定取得と、本人の予定の保存を管理する。
@@ -10,7 +11,7 @@ import type { CalendarEvent, CalendarInput, CalendarScope } from '../types';
  */
 export function useCalendar(from: string, to: string, scope: CalendarScope) {
   const key = `${from}/${to}/${scope}`;
-  const [data, setData] = useState<{ key: string; events: CalendarEvent[] } | null>(null);
+  const [data, setData] = useState<{ key: string; events: CalendarEvent[]; groups: UserGroup[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
@@ -29,7 +30,7 @@ export function useCalendar(from: string, to: string, scope: CalendarScope) {
         const response = await fetch(`/api/calendar?${params}`, { signal: controller.signal, cache: 'no-store' });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || '予定を読み込めませんでした。');
-        if (!controller.signal.aborted) setData({ key, events: result.events });
+        if (!controller.signal.aborted) setData({ key, events: result.events, groups: result.groups });
       } catch (cause) {
         if (!controller.signal.aborted) setLoadError(cause instanceof Error ? cause.message : '通信に失敗しました。');
       } finally {
@@ -81,5 +82,6 @@ export function useCalendar(from: string, to: string, scope: CalendarScope) {
     setError('');
   }
   const events = data?.key === key ? data.events : [];
-  return { events, loading: loading || (!data && !loadError), loadError, error, busy, save, reload, clearError };
+  const groups = data?.key === key ? data.groups : [];
+  return { events, groups, loading: loading || (!data && !loadError), loadError, error, busy, save, reload, clearError };
 }

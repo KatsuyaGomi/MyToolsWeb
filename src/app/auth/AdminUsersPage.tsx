@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AdminGroupsPanel } from '../groups/AdminGroupsPanel';
 
 interface ManagedUser { id: string; name: string; email: string; role: string }
 
@@ -100,12 +101,14 @@ export function AdminUsersPage() {
             <button type="submit" disabled={busy} className="rounded bg-accent px-5 py-2.5 text-sm font-semibold text-canvas disabled:opacity-50">{busy ? '作成中…' : 'アカウントを作成'}</button>
           </form>
           <h2 className="mb-4 mt-8 font-semibold">登録済みユーザー（最新100件）</h2>
+          <p className="mb-4 text-xs text-muted">新しいユーザーは未所属です。下のグループ管理で所属先を設定してください。</p>
           <div className="overflow-x-auto rounded-lg border border-line bg-panel">
             <table className="w-full text-left text-sm">
               <thead className="bg-elevated text-xs text-muted"><tr><th className="px-4 py-3">表示名</th><th className="px-4 py-3">メールアドレス</th><th className="px-4 py-3">権限</th></tr></thead>
               <tbody>{users.map(renderUser)}</tbody>
             </table>
           </div>
+          <AdminGroupsPanel users={users} />
         </>
       )}
     </section>

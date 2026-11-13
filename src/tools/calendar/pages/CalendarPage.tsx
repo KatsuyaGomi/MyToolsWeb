@@ -45,7 +45,7 @@ export function CalendarPage() {
         <div>
           <p className="mb-2 text-xs font-semibold tracking-widest text-accent">MY WORKSPACE / CALENDAR</p>
           <h1 className="text-2xl font-semibold">カレンダー</h1>
-          <p className="mt-2 text-sm leading-6 text-muted">自分の予定と、みんなのPublic予定。日時は日本時間・5分単位です。</p>
+          <p className="mt-2 text-sm leading-6 text-muted">自分の予定と、同じグループのPublic予定。日時は日本時間・5分単位です。</p>
         </div>
         <button type="button" disabled={calendar.busy} onClick={/** 選択日に追加する。 */ () => open()} className={primaryStyle}>＋ 予定追加</button>
       </header>
@@ -60,21 +60,24 @@ export function CalendarPage() {
           <label className="text-xs text-muted">表示する予定
             <select value={scope} className={fieldStyle}
               onChange={/** 閲覧範囲を切り替える。 @param action 選択変更。 */ (action) => setScope(action.target.value as CalendarScope)}>
-              <option value="public">Public — 自分の予定＋全員の公開予定</option>
+              <option value="public">Public — 自分＋共通グループの公開予定</option>
               <option value="mine">自分の予定のみ</option>
             </select>
           </label>
           <button type="button" disabled={calendar.loading} onClick={calendar.reload} className={secondaryStyle}>再読み込み</button>
         </div>
       </div>
-      <p role="status" aria-live="polite" className="mb-4 text-xs text-muted">{calendar.loading ? '予定を読み込み中…' : `表示期間内 ${calendar.events.length}件 · Publicはログイン済みユーザー全員に公開`}</p>
+      <p role="status" aria-live="polite" className="mb-4 text-xs text-muted">{calendar.loading ? '予定を読み込み中…' : `表示期間内 ${calendar.events.length}件 · Publicは共通グループのメンバーに公開`}</p>
+      {!calendar.loading && !calendar.loadError && <p className="mb-4 text-xs text-muted">
+        所属グループ: {calendar.groups.map(/** @param group 所属先。 @returns 名前。 */ (group) => group.name).join('、') || '未所属（他人のPublic予定は表示されません）'}
+      </p>}
       {calendar.loadError && <p role="alert" className="mb-4 rounded border border-danger/40 p-3 text-sm text-danger">{calendar.loadError}</p>}
       <p className="mb-3 text-xs text-muted">日付を選択すると、その日の予定と登録者を一覧で確認できます。</p>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <MonthGrid days={days} month={month} selectedDay={day} events={calendar.events} onSelect={setDay} />
         <DayAgenda day={day} events={calendar.events} onOpen={open} />
       </div>
-      {editing && <EventDialog day={day} event={editing.event} busy={calendar.busy} error={calendar.error}
+      {editing && <EventDialog day={day} event={editing.event} busy={calendar.busy} error={calendar.error} groups={calendar.groups}
         save={calendar.save} onClose={/** 詳細を閉じる。 */ () => setEditing(null)} />}
     </section>
   );
