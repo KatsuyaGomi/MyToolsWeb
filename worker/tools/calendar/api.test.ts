@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { handleCalendar } from './api.ts';
 import { parseEvent } from './validation.ts';
 import { createCalendarFixture } from './fixture.test.ts';

@@ -1,6 +1,6 @@
-/// <reference types="node" />
+/// <reference types="bun" />
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { moveTask, stepTask } from './board.ts';
 import type { TodoBoard } from '../types';
 

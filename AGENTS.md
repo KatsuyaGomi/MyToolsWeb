@@ -17,7 +17,9 @@ My Tools は、自分用のWebツールを集める日本語のWebアプリ。Cl
 
 - フロントエンド: React / TypeScript / Vite。`src/` 配下。
 - スタイリング: Tailwind CSSを採用する。ダークテーマと共通レイアウトの方針は「画面とスタイル」を参照する。
-- API: Cloudflare Workers。エントリーポイントは `worker/index.ts`。APIのパスは `/api/*`。
+- API: Cloudflare Workers + Hono。エントリーポイントは `worker/index.ts`、ルート定義は `worker/app.ts` と `worker/http/privateRoutes.ts`。APIのパスは `/api/*`。
+- 開発環境: Bun 1.4.4。`bunfig.toml` の `[run] bun = true` でVite・WranglerもBunで実行する。本番はWorkersランタイムであり、Bunサーバーを起動しない。
+- Vite・Wranglerはpackage.jsonのスクリプト経由で実行する。`scripts/bunHttpCompat.mjs` はMiniflareのdispatcher対応のため開発CLIだけに公式Undiciを読み込む。node_modulesや本番fetchを直接変更しない。背景は `docs/backend.md` を参照する。
 - ビルド連携: `@cloudflare/vite-plugin`。設定は `vite.config.ts` と `wrangler.jsonc`。
 - ツール一覧: `src/tools/registry.ts`。個別ツールは `src/tools/<tool-id>/` にまとめ、共通部品は実際に再利用される時点で切り出す。
 - Todoは `src/tools/todo/` と `worker/tools/todo/` に実装。画面・Worker双方のデータ契約だけをルートの `shared/todo.ts` に置く。ユーザー別D1保存、版番号による競合検出と上限は `docs/todo.md` を参照する。
@@ -124,6 +126,7 @@ export function formatJson(input: string, indentSize: number): string {
 2. `src/tools/<tool-id>/` に画面と処理を実装する。専用URLのルーティングと未定義URLの表示も実装する。レジストリーへの登録だけではルートは追加されない。
 3. 実装済みの遷移先を `src/tools/registry.ts` に登録し、共通サイドメニューから開けるようにする。`id` は重複しない英小文字のkebab-caseにする。
 4. サーバー処理が必要な場合のみ `/api/*` を追加し、入力をサーバー側で検証する。存在しないAPIはJSONの404、未対応メソッドは405にする。
+   ログイン後のAPIは `worker/http/privateRoutes.ts` のHonoサブルーターに登録し、`context.get('session')` の所有者を使う。公開ルートを増やすときは共通のセッション確認を迂回する理由を明示する。
 5. 変更内容に応じて検証し、構成や手順が変わったらREADMEとこのファイルも更新する。
 
 ## 実装上の約束
@@ -150,7 +153,7 @@ export function formatJson(input: string, indentSize: number): string {
 - 本番へのマイグレーション時は対象DBと既存データへの影響を確認する。削除や型変更では復旧手段も確認し、承認された作業範囲で実行する。
 - DBの実データ、エクスポート、SQLiteファイルはGitへ追加しない。マイグレーションと個人情報を含まないテストデータだけを管理する。
 - 保存・更新・削除APIを公開する際は認証・認可を確認する。D1バインディングがサーバー内部にあるだけでは、公開APIへのアクセスは制限されない。
-- DB機能の検証では、ローカルD1へのマイグレーション適用と読み書き、入力エラー、制約違反を確認する。Node単体テストだけでD1連携の検証完了としない。
+- DB機能の検証では、ローカルD1へのマイグレーション適用と読み書き、入力エラー、制約違反を確認する。Bun単体テストだけでD1連携の検証完了としない。
 
 ## 秘密情報と公開
 
@@ -167,21 +170,21 @@ export function formatJson(input: string, indentSize: number): string {
 
 ## コマンドと検証
 
-Node.js 22.12以降（推奨24 LTS）、npm 11.6.1、package-lock.jsonを使う。Cloudflareとローカルのnpmバージョンは `package.json` の `packageManager` で揃える。
+Bun 1.4.4と `bun.lock` を使う。CloudflareとローカルのBunバージョンは `package.json` の `packageManager` で揃える。npm・package-lock.jsonは使わず、ロックファイルを二重管理しない。
 
 ```sh
-npm ci                # ロックファイルに従って依存を導入
-npm run dev           # 開発サーバー
-npm run check         # 型チェックとAPIテスト
-npm run build         # 型チェックと本番ビルド
-npm run preview       # ビルド済みアプリのローカル確認
-npm run deploy        # 検証・ビルド後、Cloudflareへ公開
+bun install --frozen-lockfile                # ロックファイルに従って依存を導入
+bun run dev           # 開発サーバー
+bun run check         # 型チェックとAPIテスト
+bun run build         # 型チェックと本番ビルド
+bun run preview       # ビルド済みアプリのローカル確認
+bun run deploy        # 検証・ビルド後、Cloudflareへ公開
 ```
 
-- コード変更後は `npm run check` と `npm run build`。ドキュメントのみの場合は記載内容を確認する。
-- 依存追加・変更時はpackage.jsonとpackage-lock.jsonをセットで更新し、既存node_modulesのない隔離ディレクトリーで `npm ci` から検証する。OS別のoptional依存も含めたロックの不足と、npmのバージョン差に注意する。
+- コード変更後は `bun run check` と `bun run build`。ドキュメントのみの場合は記載内容を確認する。
+- 依存追加・変更時はpackage.jsonとbun.lockをセットで更新し、既存node_modulesのない隔離ディレクトリーで `bun install --frozen-lockfile` から検証する。OS別のoptional依存も含めたロックの不足と、Bunのバージョン差に注意する。
 - テストは重要な処理、境界条件、修正した不具合を対象にする。外観だけの変更に形式的なテストを追加しない。
-- API変更時はステータス、メソッド、エラー入力を確認する。必要に応じてWorkersローカルランタイムでも確認する。現在のNodeテストだけではWorkers固有の動作を保証しない。
+- API変更時はステータス、メソッド、エラー入力を確認する。必要に応じてWorkersローカルランタイムでも確認する。現在のBunテストだけではWorkers固有の動作を保証しない。
 - UI変更時は可能ならブラウザーで通常幅・モバイル幅・キーボード操作を確認する。できなかった確認を成功扱いにしない。
 - 手書きのコード変更時は、変更対象ファイルがコメント・空行を含めて200行以内か、日本語JSDocが各関数に記載されているかも確認する。
 - バインディングの追加時はWrangler設定と型を更新する。DB導入後はマイグレーションと既存データへの影響も確認する。

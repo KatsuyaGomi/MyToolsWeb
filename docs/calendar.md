@@ -41,9 +41,9 @@
 ## 検証・公開
 
 ```sh
-npx wrangler d1 migrations apply my-tools-web-db --local
-npm run check
-npm run build
+bun run wrangler d1 migrations apply my-tools-web-db --local
+bun run check
+bun run build
 ```
 
 公開前に `--remote` でもマイグレーションを適用します。認証・Todoテーブルは変更せず、カレンダー専用テーブルを追加します。

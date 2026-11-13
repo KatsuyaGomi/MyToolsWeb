@@ -1,6 +1,6 @@
-/// <reference types="node" />
+/// <reference types="bun" />
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { addDays, monthDays, occursOn, shiftMonth } from './dates.ts';
 
 /** 月境界・うるう日・日をまたぐ予定と終了時刻を含めない判定を検証する。 */

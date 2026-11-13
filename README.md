@@ -1,28 +1,30 @@
 # My Tools
 
 自分用のWebツールを少しずつ追加していくための、Cloudflare Workers向けアプリです。
-React + TypeScript + Viteで画面を作り、Cloudflare Vite pluginを通じてWorkersのAPIと静的アセットをまとめてビルドします。
+React + TypeScript + Viteで画面を作り、APIはHono + Better Auth + D1で実装します。開発・テスト・ビルドにはBunを使い、Cloudflare Vite pluginを通じてWorkersのAPIと静的アセットをまとめてビルドします。
 
 Tailwind CSSのダークテーマによるホーム画面、共通サイドメニュー、メールアドレス・パスワードによるアプリ内認証を用意しています。本番D1との接続と認証の公開は完了しています。[Todoカンバンボード](./docs/todo.md)と、Private/Publicの予定を管理する[カレンダー](./docs/calendar.md)を利用できます。
 
 ## 開発を始める
 
-Node.js 22.12以降（推奨24 LTS）とnpm 11.6.1を使用します。`package.json` の `packageManager` でnpmのバージョンを固定しています。ローカルも `npm --version` でバージョンを確認してください。
+Bun 1.4.4を使用します。`package.json` の `packageManager` でバージョンを固定しています。`bun --version` で確認してください。[公式のインストール手順](https://bun.sh/docs/installation)で導入できます。新しく導入した場合はターミナルを開き直してください。
+
+`bun.lock` を正本とし、package-lock.jsonは使用しません。Bun内蔵のNode互換APIを使う箇所はありますが、開発コマンドはBunで実行します。本番はCloudflare Workersのランタイムで動作します。構成と互換性対応は[バックエンドの開発手順](./docs/backend.md)を参照してください。
 
 ```sh
-npm ci
-npm run dev
+bun install --frozen-lockfile
+bun run dev
 ```
 
 ターミナルに表示されたローカルURLを開きます。初回は [認証の設定手順](./docs/authentication.md) に従って `.dev.vars` とローカルD1を設定してください。`/api/health` は公開の疎通確認として `{"status":"ok"}` を返します。
 
 ```sh
-npm run check       # TypeScriptの型チェック + APIのNode単体テスト
-npm run build       # 本番用ビルド
-npm run preview     # ビルド済みアプリをローカルのWorkersランタイムで確認
+bun run check       # TypeScriptの型チェック + APIのBun単体テスト
+bun run build       # 本番用ビルド
+bun run preview     # ビルド済みアプリをローカルのWorkersランタイムで確認
 ```
 
-`npm run build` は `scripts/cleanBuild.mjs` で前回の `dist/` を削除してからビルドします。Windowsのこの開発環境で再帰的な一括削除が異常終了したため、ファイルを順番に削除する方法にしています。生成物以外は削除しません。
+`bun run build` は `scripts/cleanBuild.mjs` で前回の `dist/` を削除してからビルドします。Windowsのこの開発環境で再帰的な一括削除が異常終了したため、ファイルを順番に削除する方法にしています。生成物以外は削除しません。
 
 ## ディレクトリー
 
@@ -44,7 +46,9 @@ src/
 shared/todo.ts          フロントエンド・Worker共通のTodoデータ型
 shared/calendar.ts      カレンダーの共通データ型・日時検証
 worker/
-  index.ts              /api/* のリクエスト処理
+  index.ts              Workersの入口（Honoアプリをexport）
+  app.ts                Honoの公開API・認証ルートの定義
+  http/                 共通ミドルウェア・ログイン後のルートと型
   index.test.ts         APIの単体テスト
   auth/                 Better Authの設定と認証テスト
   tools/todo/           Todo API・入力検証・D1保存
@@ -61,8 +65,8 @@ wrangler.jsonc          Cloudflare Workersの設定
 1. `src/tools/<tool-id>/` に画面と処理を作成する。
 2. `src/app/router/AppRoutes.tsx` に専用URLと画面の対応を実装する。現在は通常のリンクで遷移し、専用のルーターライブラリーは未導入。
 3. `src/tools/registry.ts` に `id`、`name`、`description`、`href`、`category` を登録する。共通サイドメニューとホームの一覧に反映される。
-4. サーバーが必要な場合は `worker/` に処理を追加し、`/api/*` で提供する。
-5. `npm run check` と `npm run build` を実行する。
+4. サーバーが必要な場合は `worker/tools/<tool-id>/` に処理を追加し、`worker/http/privateRoutes.ts` にHonoのルートを登録する。検証済みセッションを使い、`/api/*` で提供する。
+5. `bun run check` と `bun run build` を実行する。
 
 永続保存するアプリデータのDBには **Cloudflare D1** を使用します。ブラウザー内で完結する変換処理などは、そのままブラウザーで実行します。
 
@@ -83,8 +87,8 @@ wrangler.jsonc          Cloudflare Workersの設定
 DB設定後のマイグレーション例です。`<database-name>` は設定したDB名へ置き換えます。
 
 ```sh
-npx wrangler d1 migrations create <database-name> <migration-name>
-npx wrangler d1 migrations apply <database-name> --local
+bun run wrangler d1 migrations create <database-name> <migration-name>
+bun run wrangler d1 migrations apply <database-name> --local
 ```
 
 本番へ適用する場合は、対象DBと影響を確認したうえで `--remote` を明示します。ローカルDBは本番DBとは別で、開発中の変更が自動で本番へ反映されることはありません。実データやDBエクスポートはGitへ追加しません。
@@ -94,22 +98,22 @@ npx wrangler d1 migrations apply <database-name> --local
 公開先は `wrangler.jsonc` の `name`（`my-tools-web`）です。既存の本番D1とSecretsを使用して更新します。
 
 ```sh
-npx wrangler login
-npm run deploy
+bun run wrangler login
+bun run deploy
 ```
 
 デプロイ先URLはWranglerが表示します。認証の初回公開時は、先に [本番D1と認証の設定](./docs/authentication.md) を行ってください。
 
 ### GitHub連携のWorkers Builds
 
-- ビルドコマンド: `npm run build`
-- デプロイコマンド: `npx wrangler deploy`
+- ビルドコマンド: `bun run build`
+- デプロイコマンド: `bun run wrangler deploy`
 - ルートディレクトリー: リポジトリーのルート
 - Worker名: `wrangler.jsonc` の `name`（現在は `my-tools-web`）と一致させる
 
-依存インストールはCloudflareが自動で実行します。Workers Buildsは `packageManager` の指定からnpm 11.6.1を選択します。`engines.npm` だけではCloudflareのnpmバージョンは切り替わりません。
+依存インストールはCloudflareが自動で実行します。`bun.lock` からBunを選び、`packageManager` の指定からBun 1.4.4を使用します。既存のビルド設定がnpm/npxのままの場合は、上記のBunコマンドへ変更してください。
 
-`npm ci` が `Missing: ... from lock file` で停止する場合は、アプリのビルド前に依存関係の整合性チェックで失敗しています。`package.json` と `package-lock.json` をセットで更新し、既存の `node_modules` がない環境から `npm ci` と `npm run build` が通ることを確認します。ローカルで `npm install` が成功するだけでは検証完了にしません。
+ロックの不一致で停止する場合は、`bun install` で `package.json` と `bun.lock` を揃えます。既存の `node_modules` がない環境から `bun install --frozen-lockfile` と `bun run build` が通ることを確認してください。
 
 テンプレートから作成する操作では、元のリポジトリーを別リポジトリーへ複製する場合があります。Cloudflare側でビルド対象のリポジトリー・ブランチを確認し、修正がそのリポジトリーへ反映されてから再ビルドしてください。
 
@@ -130,6 +134,8 @@ npm run deploy
 - [Cloudflare: React SPAとAPIの構築](https://developers.cloudflare.com/workers/vite-plugin/tutorial/)
 - [Cloudflare: 静的アセット](https://developers.cloudflare.com/workers/static-assets/)
 - [Better Auth: Workersでの利用](https://better-auth.com/docs/guides/cloudflare)
-- [Cloudflare: Workers Buildsのnpmバージョン指定](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)
+- [Hono: Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)
+- [Bun: 実行設定](https://bun.sh/docs/runtime/bunfig)
+- [Cloudflare: Workers Buildsのパッケージ管理設定](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)
 - [Cloudflare D1: はじめに](https://developers.cloudflare.com/d1/get-started/)
 - [Cloudflare D1: マイグレーション](https://developers.cloudflare.com/d1/reference/migrations/)

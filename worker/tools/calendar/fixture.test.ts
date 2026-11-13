@@ -1,10 +1,10 @@
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from 'bun:sqlite';
 import { readFileSync } from 'node:fs';
 import { URL as NodeURL } from 'node:url';
 
 /** @returns 破棄可能なSQLiteとD1形式のテスト用接続。 */
 export function createCalendarFixture() {
-  const sqlite = new DatabaseSync(':memory:');
+  const sqlite = new Database(':memory:');
   sqlite.exec(`PRAGMA foreign_keys = ON;
     CREATE TABLE "user" (id TEXT PRIMARY KEY, name TEXT NOT NULL);
     INSERT INTO "user" VALUES ('alice', 'アリス'), ('bob', 'ボブ');`);

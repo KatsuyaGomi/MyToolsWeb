@@ -30,13 +30,13 @@
 ## マイグレーションと検証
 
 ```sh
-npx wrangler d1 migrations apply my-tools-web-db --local
-npm run check
-npm run build
+bun run wrangler d1 migrations apply my-tools-web-db --local
+bun run check
+bun run build
 ```
 
 本番公開前に、対象を確認して `--remote` でもマイグレーションを適用します。認証テーブル・既存ユーザーは変更しません。
 
 2026-11-12にローカル・本番へ `0003_todo.sql` を適用し、Workerへ公開済みです。
 
-Nodeテストでは所有者の分離・更新競合・不正入力・並べ替えを検証します。ローカルWorkersとD1でも保存・取得・未ログイン・別ユーザー・不正な送信元・古い版の更新を確認してください。
+Bunテストでは所有者の分離・更新競合・不正入力・並べ替えを検証します。ローカルWorkersとD1でも保存・取得・未ログイン・別ユーザー・不正な送信元・古い版の更新を確認してください。

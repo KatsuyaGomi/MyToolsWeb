@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { handleRequest } from './index.ts';
 
 /** 公開の疎通確認APIがキャッシュされないJSONを返すことを確認する。 */
@@ -35,3 +35,19 @@ test('health endpoint returns JSON without caching', returnsHealth);
 test('personal API fails closed without configuration', rejectsMissingConfiguration);
 test('health endpoint rejects unsupported methods', rejectsUnsupportedMethod);
 test('HEAD health response has no body', returnsHeadWithoutBody);
+
+/** Honoのルート登録順が公開登録の拒否と認証設定の検証を維持することを確認する。 */
+async function preservesPublicRouteGuards() {
+  for (const path of ['/api/auth/sign-up/email', '/api/auth/admin/create-user']) {
+    const response = await handleRequest(new Request(`https://example.com${path}`, { method: 'POST' }));
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  }
+  for (const path of ['/api/todo', '/api/calendar', '/api/missing']) {
+    const response = await handleRequest(new Request(`https://example.com${path}`));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  }
+}
+
+test('Honoの共通処理が公開登録と保護APIの安全側の動作を維持する', preservesPublicRouteGuards);

@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from 'bun:sqlite';
 import { readFileSync } from 'node:fs';
 import { URL as NodeURL } from 'node:url';
 
@@ -7,7 +7,7 @@ import { URL as NodeURL } from 'node:url';
  * @returns DBとD1のテスト用互換インターフェース。
  */
 export function createTodoFixture() {
-  const sqlite = new DatabaseSync(':memory:');
+  const sqlite = new Database(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON; CREATE TABLE "user" (id TEXT PRIMARY KEY); INSERT INTO "user" VALUES (\'alice\'), (\'bob\');');
   sqlite.exec(readFileSync(new NodeURL('../../../migrations/0003_todo.sql', import.meta.url), 'utf8'));
   const db = {

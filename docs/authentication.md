@@ -2,7 +2,7 @@
 
 ## 構成と実装状況
 
-外部の認証サービスへ登録せず、Better AuthライブラリーをWorkers内で動かします。メールアドレスとパスワードでログインし、ユーザーとセッションはCloudflare D1へ保存します。Firebase・Cloudflare Accessは使用しません。
+外部の認証サービスへ登録せず、HonoからBetter Authライブラリーへ認証処理を委譲します。メールアドレスとパスワードでログインし、ユーザーとセッションはCloudflare D1へ保存します。Firebase・Cloudflare Accessは使用しません。開発環境はBunです。ルートとミドルウェアは[バックエンド構成](./backend.md)を参照してください。
 
 実装済み: ログイン、ログアウト、ログイン中の表示名、認証済みユーザーを返す `/api/me`、管理者専用のユーザー一覧と一般アカウント作成、一度限りの初期管理者設定。
 
@@ -38,23 +38,23 @@ ADMIN_EMAIL=<ローカル検証用の管理者メール>
 ```
 
 ```sh
-npx wrangler d1 migrations apply my-tools-web-db --local
-npm run dev -- --port 5173 --strictPort
+bun run wrangler d1 migrations apply my-tools-web-db --local
+bun run dev -- --port 5173 --strictPort
 ```
 
 今回の初期設定ではローカル専用の秘密鍵と、ダミーのテストユーザーを作成済みです。本番へコピーしないでください。
 
 ## 別環境へ構築する場合の初回設定
 
-1. `npx wrangler login` でCloudflareへログインします。
-2. `npx wrangler d1 create my-tools-web-db` でDBを作成します。既存DBを使う場合は新規作成せず、そのDBを指定します。
+1. `bun run wrangler login` でCloudflareへログインします。
+2. `bun run wrangler d1 create my-tools-web-db` でDBを作成します。既存DBを使う場合は新規作成せず、そのDBを指定します。
 3. 実際のDB IDを `wrangler.jsonc` の `d1_databases` に設定し、バインディング名を `DB` にします。現在の本番DB IDは設定済みです。DB ID自体は接続用の識別子で、APIトークンや秘密鍵ではありません。
 4. `wrangler.jsonc` の `name` を公開中のWorker名と一致させます。現在の公開先は `my-tools-web` です。
 5. WorkerのSecretsに、本番専用に生成した `BETTER_AUTH_SECRET` を設定します。ローカル用と別の値を使い、Gitやフロントエンドへ入れません。
 6. Workerの変数 `BETTER_AUTH_URL` に、実際のHTTPS公開URLのオリジンを設定します。末尾にAPIパスを付けません。
    管理者メールはSecretの `ADMIN_EMAIL` に設定します。
-7. `npx wrangler d1 migrations apply my-tools-web-db --remote` で本番へテーブルを作成します。
-8. `npm run check` と `npm run build` を確認し、GitHubへプッシュして既存のCloudflareビルドからデプロイします。
+7. `bun run wrangler d1 migrations apply my-tools-web-db --remote` で本番へテーブルを作成します。
+8. `bun run check` と `bun run build` を確認し、GitHubへプッシュして既存のCloudflareビルドからデプロイします。
 
 秘密鍵はデプロイごとに再生成しません。変更すると既存セッション等に影響します。GitHub連携のデプロイ先が別の複製リポジトリーの場合は、変更を実際にビルドされるリポジトリーへ反映します。
 
@@ -69,11 +69,11 @@ npm run dev -- --port 5173 --strictPort
 - 取得・更新・削除のすべてで所有者をSQL条件に含めます。レコードIDが分かっても別の利用者は操作できないようにします。
 - メールアドレスは変更される可能性があるため、データの所有者キーには使いません。
 - UIで非表示にするだけでは分離になりません。ユーザーA・Bで相互のデータを操作できないことをAPI・D1で検証します。
-- 現時点でメモ・タスク機能は未追加です。今回はユーザー識別とアクセス制御の基盤まで実装しています。
+- Todoとカレンダーは追加済みです。カレンダーのPublic予定はログイン済み全員が閲覧できますが、編集・削除は本人のみです。
 
 ## 検証
 
-`npm run check` は、パスワード照合、平文パスワードの非保存、セッション失効、未認証アクセスの拒否、ユーザー識別、自己登録の拒否、所有者の管理者だけが一般ユーザーを作成できること、権限の自己昇格と他オリジンからの拒否を検証します。Nodeの一時SQLiteを使用し、本番DBへ接続しません。
+`bun run check` は、パスワード照合、平文パスワードの非保存、セッション失効、未認証アクセスの拒否、ユーザー識別、自己登録の拒否、所有者の管理者だけが一般ユーザーを作成できること、権限の自己昇格と他オリジンからの拒否を検証します。Bunの一時SQLiteを使用し、本番DBへ接続しません。
 
 ローカルのWorkersランタイムとD1でも、無効な初期設定トークンの拒否、管理者作成、トークンの再利用拒否、管理者による一般ユーザー作成を確認済みです。ブラウザーでも一般ユーザーに管理画面が表示されないことを確認しています。本番では自己登録403と未認証の管理API401を確認済みです。
 

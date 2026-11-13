@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from 'bun:sqlite';
 import { URL as NodeURL } from 'node:url';
-import test from 'node:test';
+import { test } from 'bun:test';
 import { handleRequest } from '../index.ts';
 import type { Env } from '../env.ts';
 import { createAuth } from './createAuth.ts';
@@ -14,7 +14,7 @@ const origin = 'http://127.0.0.1:5173';
  * @returns 一時DBとWorkerへ渡す設定。
  */
 function createFixture() {
-  const db = new DatabaseSync(':memory:');
+  const db = new Database(':memory:');
   db.exec(readFileSync(new NodeURL('../../migrations/0001_auth.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new NodeURL('../../migrations/0002_admin.sql', import.meta.url), 'utf8'));
   const env: Env = {
@@ -78,7 +78,7 @@ async function authenticatesAndRevokesSession() {
     });
     assert.equal(registered.status, 200, await registered.clone().text());
     const cookie = sessionCookie(registered);
-    const saved = db.prepare('SELECT password FROM account').get();
+    const saved = db.prepare<{ password: string }, []>('SELECT password FROM account').get();
     assert.equal(typeof saved?.password, 'string');
     assert.notEqual(saved?.password, password);
     assert.equal((await requestApi(env, '/api/me', undefined, cookie)).status, 200);
@@ -149,6 +149,9 @@ async function restrictsAccountCreationToOwner() {
     assert.equal((await requestApi(env, '/api/auth/sign-up/email', input)).status, 403);
     assert.equal((await requestApi(env, '/api/auth/admin/create-user', input)).status, 403);
     assert.equal((await requestApi(env, '/api/admin/users', input)).status, 401);
+    for (const path of ['/api/me', '/api/todo', '/api/calendar', '/api/missing']) {
+      assert.equal((await requestApi(env, path)).status, 401, `${path}も共通のセッション確認を通る`);
+    }
     const normal = await seedUser(env, { name: '一般', email: 'bob@example.test', password: 'test-password-5678' });
     const normalCookie = sessionCookie(normal);
     assert.equal((await requestApi(env, '/api/admin/users', input, normalCookie)).status, 403);

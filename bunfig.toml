@@ -1,0 +1,3 @@
+[run]
+# Vite・Wrangler等のnodeシバンをBunで実行する。
+bun = true
